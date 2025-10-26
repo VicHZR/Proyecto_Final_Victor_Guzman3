@@ -1,0 +1,5 @@
+.settings
+allure-results
+target
+test-output
+.idea

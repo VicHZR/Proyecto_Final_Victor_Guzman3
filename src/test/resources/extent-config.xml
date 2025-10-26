@@ -1,0 +1,11 @@
+<!-- src/test/resources/extent-config.xml -->
+<extentreports>
+    <configuration>
+        <theme>standard</theme>
+        <encoding>utf-8</encoding>
+        <protocol>https</protocol>
+        <documentTitle>Reporte de Pruebas Automatizadas</documentTitle>
+        <reportName>Resultados de Pruebas - Juice Shop</reportName>
+        <timelineEnabled>true</timelineEnabled>
+    </configuration>
+</extentreports>

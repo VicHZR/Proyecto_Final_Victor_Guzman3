@@ -1,0 +1,75 @@
+name: Run Java Automation Tests
+
+on:
+  workflow_dispatch:
+
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install Google Chrome and ChromeDriver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip jq
+
+          CHROME_VERSION=$(curl -s https://versionhistory.googleapis.com/v1/chrome/platforms/linux/channels/stable/versions \
+            | jq -r '.versions[0].version')
+
+          echo "Using Chrome version: $CHROME_VERSION"
+
+          wget "https://storage.googleapis.com/chrome-for-testing-public/${CHROME_VERSION}/linux64/chrome-linux64.zip"
+          wget "https://storage.googleapis.com/chrome-for-testing-public/${CHROME_VERSION}/linux64/chromedriver-linux64.zip"
+
+          unzip chrome-linux64.zip
+          unzip chromedriver-linux64.zip
+
+          sudo mv chrome-linux64 /opt/google-chrome
+          sudo mv chromedriver-linux64/chromedriver /usr/local/bin/
+          sudo chmod +x /usr/local/bin/chromedriver
+          sudo ln -sf /opt/google-chrome/chrome /usr/bin/google-chrome
+
+          /opt/google-chrome/chrome --version
+          chromedriver --version
+
+      - name: Ensure Docker is running
+        run: |
+          sudo systemctl start docker
+          docker --version
+
+      - name: Run OWASP Juice Shop in Docker
+        run: |
+          docker pull bkimminich/juice-shop
+          docker run -d -p 3000:3000 --name juice-shop bkimminich/juice-shop
+          docker ps
+
+      - name: Build project
+        run: mvn clean install -DskipTests
+
+      - name: Run automation tests
+        run: mvn test
+        env:
+          CI: true
+
+      - name: Upload test report (artifact)
+        uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: SparkReport
+          path: target/spark-reports/
+
+      - name: Stop and clean Docker
+        if: always()
+        run: |
+          docker stop juice-shop
+          docker rm juice-shop
